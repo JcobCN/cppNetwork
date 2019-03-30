@@ -4,13 +4,19 @@ extern "C"{
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
 #include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
  #include <arpa/inet.h>
 }
 
+#include <iostream>
+
 using namespace std;
+
+#define DEBUG 0
 
 #define ERR_EXIT(m)\
     do\
@@ -29,13 +35,13 @@ int tcpServer(int port)
 //    AF_INET == PF_INET
 
     int listenfd;
-    if( listenfd = socket(
+    if( (listenfd = socket(
                 PF_INET,//ipv4
                 SOCK_STREAM|//流 tcp
 //                SOCK_NONBLOCK|//非阻塞
                 SOCK_CLOEXEC//子进程继承带有该flag的fd时，子进程会默认关闭父进程的fd,
                 ,IPPROTO_TCP//指定 协议，为0则为地址默认的协议
-                )
+                ))
                 < 0)
         ERR_EXIT("socket");
     struct sockaddr_in servAddr; //配置服务器地址
@@ -62,18 +68,114 @@ int tcpServer(int port)
     if( listen(listenfd, SOMAXCONN) < 0 )//监听个数
         ERR_EXIT("listen");
 
-    accept4(listenfd, )
-
+    struct sockaddr_in peerAddr;
+    socklen_t peerLen = sizeof(peerAddr);
     while(true)
     {
+        int connfd = accept4(listenfd, (struct sockaddr*)&peerAddr,
+                             &peerLen,
+//                             SOCK_NONBLOCK | //非阻塞
+                             SOCK_CLOEXEC);
 
+        if(connfd == -1)
+            ERR_EXIT("accept4");
+
+        std::cout <<  inet_ntoa( peerAddr.sin_addr) << "port:"<< ntohs(peerAddr.sin_port) << std::endl;
+#if DEBUG
+        while(1)
+        {
+            send(connfd, "233\n", sizeof("233\n"), 0);
+        }
+#endif
+
+        while(true) //与连接进来的client通信，直到client发出退出请求
+        {
+            char buf[1024] = "";
+            int readSize = sizeof(buf);
+            int ret;
+
+            read(connfd, buf, readSize);
+            std::cout << buf << endl;
+
+//            while( (ret = read(connfd, buf, readSize)) )//循环读，直到读不出来，返回0 (阻塞)
+//            {
+//                std::cout << buf;
+//            }
+
+            if(buf[0] == 'e' && buf[1] == 'i')//接收到退出指令，退出
+            {
+                send(connfd, "exited", sizeof("exited"), 0);
+                close(connfd);
+                break;
+            }
+
+            if(ret == -1)
+                ERR_EXIT("read");
+
+            string s = "<h1> hello world</h1>";
+            ret = send(connfd, s.c_str(), strlen(s.c_str()), 0) ;
+            if(ret == -1)
+                ERR_EXIT("send");
+        }
+
+//        close(connfd);
     }
 
 }
 
+void tcpClient(char* ip, char* port)
+{
+    sockaddr_in servAddr;
+    std::cout << ip << ":" << port << std::endl;
+
+    servAddr.sin_family = PF_INET;
+    inet_aton(ip, &servAddr.sin_addr);
+    servAddr.sin_port = htons(strtoul(port, 0, 0));
+
+    int servfd;
+    if( (servfd = socket(AF_INET,
+                         SOCK_STREAM
+//                         SOCK_NONBLOCK //非阻塞
+                          , 0)) < 0 )
+        ERR_EXIT("socket");
+
+    while(true)
+    {
+        if( connect(servfd, (struct sockaddr*)&servAddr, sizeof(servAddr))  < 0 )
+            ERR_EXIT("connect");
+
+        std::cout << "servdf=" << servfd << endl;
+
+        while(true)
+        {
+            //默认client发信息， server收信息
+            char buf[1024] = "sadfdsaf";
+            int ret;
+//            std::cout << "input something to server" << endl;
+//            std::cin.getline(buf, 1024, '\n');
+//            std::cout << "done!" << "buf=" << buf << std::endl;
+
+            std::cout << "before sen" << endl;
+            write(servfd,  buf, sizeof(buf));
+            std::cout << "after sen" << endl;
+//             if(ret < 0)
+//                 ERR_EXIT("send");
+
+            while( (ret = recv(servfd, buf, sizeof(buf), 0)) )//阻塞时，循环读容易卡住，需要优化->可能需要非阻塞
+            {
+                std::cout << buf;
+                if(ret <= sizeof(buf))
+                    break;
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
-
-
+    if( argc == 3 )
+        tcpClient(argv[1], argv[2]);
+    else
+        tcpServer( atoi(argv[1]));
     return 0;
 }
