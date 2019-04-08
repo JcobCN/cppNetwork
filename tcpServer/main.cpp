@@ -94,13 +94,14 @@ int tcpServer(int port)
             int readSize = sizeof(buf);
             int ret;
 
-            read(connfd, buf, readSize);
-            std::cout << buf << endl;
-
-//            while( (ret = read(connfd, buf, readSize)) )//循环读，直到读不出来，返回0 (阻塞)
-//            {
-//                std::cout << buf;
-//            }
+            std::cout << "- wait client msg -" <<endl;
+            while( (ret = recv(connfd, buf, readSize, 0)) )//循环读，直到读不出来，返回0 (阻塞)
+            {
+                std::cout << buf << endl;
+                if(ret <= readSize) //读完内容就break,否则又在等read的内容而卡住
+                    break;
+            }
+            std::cout << "- got clietn msg -" <<endl;
 
             if(buf[0] == 'e' && buf[1] == 'i')//接收到退出指令，退出
             {
@@ -112,7 +113,7 @@ int tcpServer(int port)
             if(ret == -1)
                 ERR_EXIT("read");
 
-            string s = "<h1> hello world</h1>";
+            string s = "<h1> hello world, server got msg</h1>";
             ret = send(connfd, s.c_str(), strlen(s.c_str()), 0) ;
             if(ret == -1)
                 ERR_EXIT("send");
@@ -144,26 +145,28 @@ void tcpClient(char* ip, char* port)
         if( connect(servfd, (struct sockaddr*)&servAddr, sizeof(servAddr))  < 0 )
             ERR_EXIT("connect");
 
-        std::cout << "servdf=" << servfd << endl;
-
         while(true)
         {
             //默认client发信息， server收信息
-            char buf[1024] = "sadfdsaf";
+            char buf[1024] = "";
+            int bufSize = sizeof(buf);
             int ret;
-//            std::cout << "input something to server" << endl;
-//            std::cin.getline(buf, 1024, '\n');
-//            std::cout << "done!" << "buf=" << buf << std::endl;
+            std::cout << "- input something to server:" << endl;
+            std::cin.getline(buf, 1024, '\n');
 
-            std::cout << "before sen" << endl;
+            while( (ret = send(servfd, buf, bufSize, 0)) )
+            {
+                if(ret <= bufSize)
+                    break;
+            }
+
             write(servfd,  buf, sizeof(buf));
-            std::cout << "after sen" << endl;
 //             if(ret < 0)
 //                 ERR_EXIT("send");
 
             while( (ret = recv(servfd, buf, sizeof(buf), 0)) )//阻塞时，循环读容易卡住，需要优化->可能需要非阻塞
             {
-                std::cout << buf;
+                std::cout << buf << endl;
                 if(ret <= sizeof(buf))
                     break;
             }
