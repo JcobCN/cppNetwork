@@ -1,0 +1,3 @@
+/mnt/hgfs/my_program/cppNetWork/build-tcpServer-unknown-Default/CMakeFiles/rebuild_cache.dir
+/mnt/hgfs/my_program/cppNetWork/build-tcpServer-unknown-Default/CMakeFiles/tcpServer.dir
+/mnt/hgfs/my_program/cppNetWork/build-tcpServer-unknown-Default/CMakeFiles/edit_cache.dir

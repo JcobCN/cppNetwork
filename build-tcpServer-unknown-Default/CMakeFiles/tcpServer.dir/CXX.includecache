@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/hgfs/my_program/cppNetWork/tcpServer/main.cpp
+iostream
+-
+stdlib.h
+-
+stdio.h
+-
+string.h
+-
+unistd.h
+-
+signal.h
+-
+sys/socket.h
+-
+netinet/in.h
+-
+arpa/inet.h
+-
+iostream
+-
+
